@@ -1,0 +1,1 @@
+export async function generateAI(prompt: string, systemPrompt?: string): Promise<string> { const res = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, systemPrompt }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Gagal memanggil AI'); return data.result }

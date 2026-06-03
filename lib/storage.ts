@@ -1,0 +1,5 @@
+export const STORAGE_KEYS = { links: 'affiliate_links', performa: 'affiliate_performa', multiproduk: 'affiliate_multiproduk' } as const
+export function simpan<T>(key: string, data: T): void { try { if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(data)) } catch (error) { console.error('Gagal menyimpan localStorage:', error) } }
+export function ambil<T>(key: string, fallback: T): T { try { if (typeof window === 'undefined') return fallback; const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback } catch (error) { console.error('Gagal membaca localStorage:', error); return fallback } }
+export function hapus(key: string): void { try { if (typeof window !== 'undefined') localStorage.removeItem(key) } catch (error) { console.error('Gagal menghapus localStorage:', error) } }
+export function hapusSemua(): void { try { if (typeof window !== 'undefined') Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key)) } catch (error) { console.error('Gagal menghapus semua data:', error) } }
