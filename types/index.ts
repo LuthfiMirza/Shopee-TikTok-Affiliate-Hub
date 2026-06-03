@@ -6,3 +6,27 @@ export interface CatatanPerforma { id: string; tanggal: string; totalKlik: numbe
 export interface GeneratorConfig { produk: string; jenisKonten: JenisKonten; targetAudiens: string; poinUtama: string }
 export type JenisKonten = 'review' | 'unboxing' | 'tutorial' | 'perbandingan' | 'hook' | 'caption'
 export type Kategori = 'Kecantikan' | 'Fashion' | 'Makanan' | 'Elektronik' | 'Rumah Tangga' | 'Kesehatan'
+
+export interface DataGrafik {
+  tanggal: string
+  klik: number
+  konversi: number
+  komisi: number
+}
+
+export interface StatRingkasan {
+  totalKlik: number
+  totalKonversi: number
+  totalKomisi: number
+  rataRataCR: number
+  hariTerbaik: string
+  hariBuruk: string
+}
+
+export interface ExportOptions {
+  startDate: string
+  endDate: string
+  includeKlik: boolean
+  includeKonversi: boolean
+  includeKomisi: boolean
+}
