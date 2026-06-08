@@ -1,7 +1,69 @@
 'use client'
+
 import { FormEvent, useState } from 'react'
 import { hitungKomisiPerUnit, hitungPotensiPerBulan, hitungSkorProduk } from '@/lib/calculations'
 import { useAnalisisStore } from '@/store/useAnalisisStore'
 import type { Produk } from '@/types'
+
 const kategori = ['Kecantikan', 'Fashion', 'Makanan', 'Elektronik', 'Rumah Tangga', 'Kesehatan']
-export function AnalisisForm() { const setAnalisis = useAnalisisStore((s) => s.setAnalisis); const [form, setForm] = useState({ nama: '', kategori: 'Kecantikan', harga: 0, persenKomisi: 5, terjualPerBulan: 100, rating: 4.5, platform: 'shopee' as Produk['platform'] }); const submit = (e: FormEvent) => { e.preventDefault(); const produk: Produk = { ...form, id: crypto.randomUUID(), createdAt: new Date().toISOString() }; const komisiPerUnit = hitungKomisiPerUnit(form.harga, form.persenKomisi); const potensiPerBulan = hitungPotensiPerBulan(komisiPerUnit, form.terjualPerBulan); const skor = hitungSkorProduk(form.harga, komisiPerUnit, form.terjualPerBulan, form.rating); setAnalisis(produk, { komisiPerUnit, potensiPerBulan, ...skor }) }; return <form onSubmit={submit} className="grid gap-4 md:grid-cols-2"><input required placeholder="Nama produk" className="rounded-xl border p-3 dark:bg-gray-800" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} /><select className="rounded-xl border p-3 dark:bg-gray-800" value={form.kategori} onChange={(e) => setForm({ ...form, kategori: e.target.value })}>{kategori.map((k) => <option key={k}>{k}</option>)}</select>{[['harga','Harga (Rp)'],['persenKomisi','Komisi (%)'],['terjualPerBulan','Terjual/bulan'],['rating','Rating 0-5']].map(([key,label]) => <input key={key} type="number" step={key === 'rating' ? '0.1' : '1'} placeholder={label} className="rounded-xl border p-3 dark:bg-gray-800" value={form[key as keyof typeof form] as number} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} />)}<select className="rounded-xl border p-3 dark:bg-gray-800" value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value as Produk['platform'] })}><option value="shopee">Shopee</option><option value="tiktok">TikTok Shop</option><option value="keduanya">Keduanya</option></select><button className="rounded-xl bg-primary px-4 py-3 font-semibold text-white hover:bg-primary-dark md:col-span-2">Analisis Produk</button></form> }
+const clampNumber = (value: number, min: number, max?: number) => Math.max(min, max === undefined ? value : Math.min(max, value))
+
+export function AnalisisForm() {
+  const setAnalisis = useAnalisisStore((state) => state.setAnalisis)
+  const [form, setForm] = useState({
+    nama: '',
+    kategori: 'Kecantikan',
+    harga: 0,
+    persenKomisi: 5,
+    terjualPerBulan: 100,
+    rating: 4.5,
+    platform: 'shopee' as Produk['platform'],
+  })
+
+  const updateNumber = (key: 'harga' | 'persenKomisi' | 'terjualPerBulan' | 'rating', value: string) => {
+    const numberValue = Number(value)
+    const safeValue = Number.isFinite(numberValue) ? numberValue : 0
+    const safeFormValue = key === 'persenKomisi'
+      ? clampNumber(safeValue, 0, 100)
+      : key === 'rating'
+        ? clampNumber(safeValue, 0, 5)
+        : clampNumber(safeValue, 0)
+
+    setForm({ ...form, [key]: safeFormValue })
+  }
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+
+    const produk: Produk = {
+      ...form,
+      nama: form.nama.trim(),
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    }
+    const komisiPerUnit = hitungKomisiPerUnit(produk.harga, produk.persenKomisi)
+    const potensiPerBulan = hitungPotensiPerBulan(komisiPerUnit, produk.terjualPerBulan)
+    const skor = hitungSkorProduk(produk.harga, komisiPerUnit, produk.terjualPerBulan, produk.rating)
+
+    setAnalisis(produk, { komisiPerUnit, potensiPerBulan, ...skor })
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
+      <input required placeholder="Nama produk" className="rounded-xl border p-3 dark:bg-gray-800" value={form.nama} onChange={(event) => setForm({ ...form, nama: event.target.value })} />
+      <select className="rounded-xl border p-3 dark:bg-gray-800" value={form.kategori} onChange={(event) => setForm({ ...form, kategori: event.target.value })}>
+        {kategori.map((item) => <option key={item}>{item}</option>)}
+      </select>
+      <input required type="number" min="0" step="1" placeholder="Harga (Rp)" className="rounded-xl border p-3 dark:bg-gray-800" value={form.harga} onChange={(event) => updateNumber('harga', event.target.value)} />
+      <input required type="number" min="0" max="100" step="0.1" placeholder="Komisi (%)" className="rounded-xl border p-3 dark:bg-gray-800" value={form.persenKomisi} onChange={(event) => updateNumber('persenKomisi', event.target.value)} />
+      <input required type="number" min="0" step="1" placeholder="Terjual/bulan" className="rounded-xl border p-3 dark:bg-gray-800" value={form.terjualPerBulan} onChange={(event) => updateNumber('terjualPerBulan', event.target.value)} />
+      <input required type="number" min="0" max="5" step="0.1" placeholder="Rating 0-5" className="rounded-xl border p-3 dark:bg-gray-800" value={form.rating} onChange={(event) => updateNumber('rating', event.target.value)} />
+      <select className="rounded-xl border p-3 dark:bg-gray-800" value={form.platform} onChange={(event) => setForm({ ...form, platform: event.target.value as Produk['platform'] })}>
+        <option value="shopee">Shopee</option>
+        <option value="tiktok">TikTok Shop</option>
+        <option value="keduanya">Keduanya</option>
+      </select>
+      <button className="rounded-xl bg-primary px-4 py-3 font-semibold text-white hover:bg-primary-dark md:col-span-2">Analisis Produk</button>
+    </form>
+  )
+}
