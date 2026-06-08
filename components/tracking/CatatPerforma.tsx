@@ -5,10 +5,11 @@ import { formatRupiah, hitungConversionRate } from '@/lib/calculations'
 import { useTrackingStore } from '@/store/useTrackingStore'
 
 export function CatatPerforma() {
-  const { performa, hydrate, tambahPerforma, hapusPerforma } = useTrackingStore()
+  const { links, performa, hydrate, tambahPerforma, hapusPerforma } = useTrackingStore()
   const [showAll, setShowAll] = useState(false)
   const [form, setForm] = useState({
     tanggal: new Date().toISOString().slice(0, 10),
+    linkId: '',
     totalKlik: 0,
     konversi: 0,
     komisiDiperoleh: 0,
@@ -16,12 +17,14 @@ export function CatatPerforma() {
 
   useEffect(() => hydrate(), [hydrate])
 
-  const cr = hitungConversionRate(form.totalKlik, form.konversi)
+  const safeKonversi = Math.min(form.konversi, form.totalKlik)
+  const cr = hitungConversionRate(form.totalKlik, safeKonversi)
   const visibleRows = showAll ? performa : performa.slice(0, 7)
+  const linkNameById = new Map(links.map((link) => [link.id, link.nama]))
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    tambahPerforma({ id: crypto.randomUUID(), ...form, conversionRate: cr })
+    tambahPerforma({ id: crypto.randomUUID(), ...form, linkId: form.linkId || undefined, konversi: safeKonversi, conversionRate: cr })
   }
 
   const handleDelete = (id: string, tanggal: string) => {
@@ -32,20 +35,24 @@ export function CatatPerforma() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={submit} className="grid gap-3 md:grid-cols-5">
-        <input type="date" className="rounded-xl border p-3 dark:bg-gray-800" value={form.tanggal} onChange={(event) => setForm({ ...form, tanggal: event.target.value })} />
+      <form onSubmit={submit} className="grid gap-3 md:grid-cols-6">
+        <input required type="date" className="rounded-xl border p-3 dark:bg-gray-800" value={form.tanggal} onChange={(event) => setForm({ ...form, tanggal: event.target.value })} />
+        <select className="rounded-xl border p-3 dark:bg-gray-800 md:col-span-2" value={form.linkId} onChange={(event) => setForm({ ...form, linkId: event.target.value })}>
+          <option value="">Umum / belum pilih link</option>
+          {links.map((link) => <option key={link.id} value={link.id}>{link.nama}</option>)}
+        </select>
         {[
           ['totalKlik', 'Total klik'],
           ['konversi', 'Konversi'],
           ['komisiDiperoleh', 'Komisi Rp'],
         ].map(([key, label]) => (
-          <input key={key} type="number" className="rounded-xl border p-3 dark:bg-gray-800" placeholder={label} value={form[key as keyof typeof form]} onChange={(event) => setForm({ ...form, [key]: Number(event.target.value) })} />
+          <input key={key} type="number" min="0" step="1" className="rounded-xl border p-3 dark:bg-gray-800" placeholder={label} value={form[key as keyof typeof form]} onChange={(event) => setForm({ ...form, [key]: Math.max(0, Number(event.target.value) || 0) })} />
         ))}
-        <button className="rounded-xl bg-primary px-4 py-3 font-semibold text-white">Simpan</button>
+        <button className="rounded-xl bg-primary px-4 py-3 font-semibold text-white md:col-span-6">Simpan</button>
       </form>
 
       <p className="text-sm">
-        Conversion Rate: <b>{cr}%</b>
+        Conversion Rate: <b>{cr}%</b>{form.konversi > form.totalKlik && <span className="text-red-600"> · Konversi disimpan maksimal sama dengan klik</span>}
       </p>
 
       <div className="overflow-x-auto">
@@ -53,6 +60,7 @@ export function CatatPerforma() {
           <thead>
             <tr className="border-b dark:border-gray-700">
               <th className="p-2">Tanggal</th>
+              <th>Link/Produk</th>
               <th>Klik</th>
               <th>Konversi</th>
               <th>CR%</th>
@@ -64,6 +72,7 @@ export function CatatPerforma() {
             {visibleRows.map((row) => (
               <tr key={row.id} className="border-b dark:border-gray-800">
                 <td className="p-2">{row.tanggal}</td>
+                <td>{row.linkId ? linkNameById.get(row.linkId) || 'Link terhapus' : 'Umum'}</td>
                 <td>{row.totalKlik}</td>
                 <td>{row.konversi}</td>
                 <td>{row.conversionRate}%</td>
